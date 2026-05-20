@@ -21,6 +21,7 @@ To run this script as an integrated dockable panel inside After Effects, follow 
    * **macOS:** `/Applications/Adobe After Effects [Version]/Scripts/ScriptUI Panels/`
 2. Restart After Effects.
 3. Open the panel by navigating to **Window** > **AE_Graph_Generator.jsx** at the bottom of the menu.
+   
 *(Note: If your IT department restricts write access to system folders, you can bypass this by installing it directly inside After Effects via **File** > **Scripts** > **Install ScriptUI Panel...**)*
 
 
