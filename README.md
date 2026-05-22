@@ -12,6 +12,10 @@ Skip the hassle of rigging external vector charts or wrestling with outdated des
 * **Multi-Format Chart Engine**: Build grouped side-by-side or stacked bar charts with automatic segment offsets, as well as highly customizable line and area charts (including multi-series stacked area charts).
 * **100% Native After Effects Layers**: Generates raw, native After Effects Shape and Text layers—allowing you to infinitely customize, keyframe, and stylize the results. What this tool spits out is just your perfect starting point.
 
+<a href="https://vimeo.com/1193390606/0d5c15bfad">
+  <img src="https://github.com/user-attachments/assets/0301aa69-444c-4ba6-9ab8-a3fc7561c368" alt="Watch a showcase on Vimeo" width="400"/>
+</a>
+
 ## 💾 Installation Guide
 
 To run this script as an integrated dockable panel inside After Effects, follow these steps:
@@ -23,6 +27,7 @@ To run this script as an integrated dockable panel inside After Effects, follow 
 3. Open the panel by navigating to **Window** > **AE_Graph_Generator.jsx** at the bottom of the menu.
    
 *(Note: If your IT department restricts write access to system folders, you can bypass this by installing it directly inside After Effects via **File** > **Scripts** > **Install ScriptUI Panel...**)*
+
 
 
 _Vibe coded by Gemini, supervised by [Miro Johansson](https://mirojohansson.com)_
