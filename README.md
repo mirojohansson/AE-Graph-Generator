@@ -9,7 +9,7 @@ Skip the hassle of rigging external vector charts or wrestling with outdated des
 ### Features & Supported Styles:
 
 * **Direct Import & Flexible Mapping**: Paste cell data directly from Excel, Google Sheets, or standard CSVs with automatic delimiter detection and full support for both Long (rows) and Wide (columns) dataset formats.
-* **Multi-Format Chart Engine: Build grouped side-by-side or stacked bar charts, customizable line and area charts, and proportional pie and donut charts.
+* **Multi-Format Chart Engine**: Build grouped side-by-side or stacked bar charts, customizable line and area charts, and proportional pie and donut charts.
 * **100% Native After Effects Layers**: Generates raw, native After Effects Shape and Text layers—allowing you to infinitely customize, keyframe, and stylize the results. What this tool spits out is just your perfect starting point.
 
 <a href="https://vimeo.com/1193390606/0d5c15bfad">
