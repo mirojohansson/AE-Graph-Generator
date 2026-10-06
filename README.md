@@ -1,6 +1,6 @@
 # AE Graph Generator
 
-An After Effects ExtendScript panel that instantly converts spreadsheet data from Excel, Google Sheets, or CSVs into clean, dynamically animated line, area, and bar charts. Because everything is built using native shape and text layers, it provides motion designers with a mathematically precise, distortion-free starting point for infinite visual styling and keyframing.
+An After Effects ExtendScript panel that instantly converts spreadsheet data from Excel, Google Sheets, or CSVs into clean, dynamically animated charts and graphs. Because everything is built using native shape and text layers, it provides motion designers with a mathematically precise, distortion-free starting point for infinite visual styling and keyframing.
 
 ## 🚀 Generate graphs in seconds!
 
@@ -9,7 +9,7 @@ Skip the hassle of rigging external vector charts or wrestling with outdated des
 ### Features & Supported Styles:
 
 * **Direct Import & Flexible Mapping**: Paste cell data directly from Excel, Google Sheets, or standard CSVs with automatic delimiter detection and full support for both Long (rows) and Wide (columns) dataset formats.
-* **Multi-Format Chart Engine**: Build grouped side-by-side or stacked bar charts with automatic segment offsets, as well as highly customizable line and area charts (including multi-series stacked area charts).
+* **Multi-Format Chart Engine: Build grouped side-by-side or stacked bar charts, customizable line and area charts, and proportional pie and donut charts.
 * **100% Native After Effects Layers**: Generates raw, native After Effects Shape and Text layers—allowing you to infinitely customize, keyframe, and stylize the results. What this tool spits out is just your perfect starting point.
 
 <a href="https://vimeo.com/1193390606/0d5c15bfad">
