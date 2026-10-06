@@ -75,6 +75,8 @@
     };
 
     var customPastedPalette = null;
+    var currentWideColumns = [];
+    var currentLongSeriesOrder = [];
 
     function resolveScaleColors(presetName, count) {
         if (customPastedPalette && customPastedPalette.length > 0 && presetName === "Custom / Pasted") {
@@ -234,7 +236,6 @@
         if (typeof v === "string") {
             var clean = v.replace(/^\s+|\s+$/g, '');
             if (clean === "-" || clean === "") return 0;
-            // Handle European comma decimals and thousand separators
             clean = clean.replace(/\s/g, '');
             if (clean.indexOf(',') !== -1 && clean.indexOf('.') !== -1) {
                 if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
@@ -445,7 +446,7 @@
         var loadBtn = tabDataScroll.add("button", undefined, "Load Data ➔");
         loadBtn.preferredSize = [-1, 32];
 
-        // TAB 2: MAPPING & COLORS (With working viewport scrollbar)
+        // TAB 2: MAPPING & COLORS
         var tabMapColors = tabGroup.add("tab", undefined, "2. Mapping & Colors");
         tabMapColors.orientation = "row";
         tabMapColors.alignChildren = ["fill", "fill"];
@@ -478,7 +479,6 @@
         mapPanel.spacing = 6;
         mapPanel.margins = 10;
 
-        // Data Format Row with Transpose Button
         var formatRow = mapPanel.add("group");
         formatRow.orientation = "row";
         formatRow.alignChildren = ["left", "center"];
@@ -511,7 +511,8 @@
         var groupLabel = groupRowGrp.add("statictext", undefined, "Group:");
         groupLabel.preferredSize = [80, 20];
         var groupDD = groupRowGrp.add("dropdownlist", undefined);
-        groupDD.alignment = ["fill", "center"];
+        groupDD.preferredSize = [120,25];
+        groupDD.alignment = ["left", "center"];
 
         var yRowGrp = mapPanel.add("group");
         yRowGrp.orientation = "row";
@@ -519,7 +520,8 @@
         var yLabel = yRowGrp.add("statictext", undefined, "Y-Axis:");
         yLabel.preferredSize = [80, 20];
         var yDD = yRowGrp.add("dropdownlist", undefined);
-        yDD.alignment = ["fill", "center"];
+        yDD.preferredSize = [120, 25];
+        yDD.alignment = ["left", "center"];
 
         var valueLabelsRowGrp = mapPanel.add("group");
         valueLabelsRowGrp.orientation = "row";
@@ -527,7 +529,8 @@
         var valueLabelSrcLabel = valueLabelsRowGrp.add("statictext", undefined, "Custom Labels:");
         valueLabelSrcLabel.preferredSize = [80, 20];
         var valueLabelDD = valueLabelsRowGrp.add("dropdownlist", undefined);
-        valueLabelDD.alignment = ["fill", "center"];
+        valueLabelDD.preferredSize = [120, 25];
+        valueLabelDD.alignment = ["left", "center"];
 
         var wideFormatInfoTxt = mapPanel.add("statictext", undefined, "Wide format: Arrange series order & color palette below.");
         wideFormatInfoTxt.visible = true;
@@ -538,16 +541,18 @@
         var sLabel = sRowGrp.add("statictext", undefined, "Series:");
         sLabel.preferredSize = [80, 20];
         var sDD = sRowGrp.add("dropdownlist", undefined);
-        sDD.alignment = ["fill", "center"];
+        sDD.preferredSize = [120, 25];
+        sDD.alignment = ["left", "center"];
 
         var typeGrp = mapPanel.add("group");
         typeGrp.orientation = "row";
         typeGrp.alignChildren = ["left", "center"];
         var typeLabel = typeGrp.add("statictext", undefined, "Chart Type:");
         typeLabel.preferredSize = [80, 20];
-        var typeDD = typeGrp.add("dropdownlist", undefined, ["Line", "Bar"]);
+        var typeDD = typeGrp.add("dropdownlist", undefined, ["Line", "Bar", "Pie"]);
+        typeDD.preferredSize = [120, 25]; // Sets width to 120px, height to 25px
         typeDD.selection = 0;
-        typeDD.alignment = ["fill", "center"];
+        typeDD.alignment = ["left", "center"];
 
         var contextualStylesPanel = mapPanel.add("group");
         contextualStylesPanel.orientation = "column";
@@ -587,6 +592,14 @@
         barLabelGrp.orientation = "row";
         barLabelGrp.add("statictext", undefined, "Bars Style:").preferredSize = [70, 20];
 
+        var barOrientRow = barStyleGrp.add("group");
+        barOrientRow.orientation = "row";
+        barOrientRow.spacing = 10;
+        barOrientRow.add("statictext", undefined, "Orientation:");
+        var barOrientationDD = barOrientRow.add("dropdownlist", undefined, ["Vertical", "Horizontal"]);
+        barOrientationDD.selection = 0;
+        barOrientationDD.preferredSize = [100, 20];
+
         var barChkRow = barStyleGrp.add("group");
         barChkRow.orientation = "row";
         barChkRow.spacing = 10;
@@ -607,6 +620,37 @@
         bgGrp.add("statictext", undefined, "Gap %:");
         var barGapInput = bgGrp.add("edittext", undefined, "25"); barGapInput.preferredSize = [35, 20];
 
+        // Pie & Donut Controls
+        var pieStyleGrp = contextualStylesPanel.add("group");
+        pieStyleGrp.orientation = "column";
+        pieStyleGrp.alignChildren = ["left", "top"];
+        pieStyleGrp.spacing = 4;
+        pieStyleGrp.visible = false;
+
+        var pieLabelGrp = pieStyleGrp.add("group");
+        pieLabelGrp.orientation = "row";
+        pieLabelGrp.add("statictext", undefined, "Pie Style:").preferredSize = [70, 20];
+
+        var pieToggleRow = pieStyleGrp.add("group");
+        pieToggleRow.orientation = "row";
+        pieToggleRow.spacing = 10;
+        var donutChk = pieToggleRow.add("checkbox", undefined, "Donut Chart"); donutChk.value = true;
+
+        var pieDimRow = pieStyleGrp.add("group");
+        pieDimRow.orientation = "row";
+        pieDimRow.spacing = 8;
+        pieDimRow.add("statictext", undefined, "Max Radius:");
+        var maxRadiusIn = pieDimRow.add("edittext", undefined, "220"); maxRadiusIn.preferredSize = [40, 20];
+        
+        var holeLabel = pieDimRow.add("statictext", undefined, "Hole Size %:");
+        var holeSizeIn = pieDimRow.add("edittext", undefined, "50"); holeSizeIn.preferredSize = [35, 20];
+
+        donutChk.onClick = function() {
+            holeLabel.visible = donutChk.value;
+            holeSizeIn.visible = donutChk.value;
+            updateTotalSumVisibility();
+        };
+
         var subLabelChkRow = contextualStylesPanel.add("group");
         subLabelChkRow.orientation = "row";
         subLabelChkRow.alignChildren = ["left", "center"];
@@ -614,11 +658,12 @@
         showSubLabelsChk.value = true;
         showSubLabelsChk.visible = false;
 
-        var colorsPanel = tabMapScroll.add("panel", undefined, "Series & Colors");
+        var colorsPanel = tabMapScroll.add("panel", undefined, "  Series & Colors  ");
         colorsPanel.orientation = "column";
         colorsPanel.alignChildren = ["fill", "top"];
         colorsPanel.spacing = 5;
         colorsPanel.margins = 8;
+        colorsPanel.minimumSize = [330, -1];
 
         var presetSelectRow = colorsPanel.add("group");
         presetSelectRow.orientation = "row";
@@ -651,11 +696,11 @@
         
         var selectAllColsBtn = colHeaders.add("button", undefined, "All");
         selectAllColsBtn.preferredSize = [32, 18];
-        selectAllColsBtn.helpTip = "Select all data columns";
+        selectAllColsBtn.helpTip = "Select all data series";
 
         var deselectAllColsBtn = colHeaders.add("button", undefined, "None");
         deselectAllColsBtn.preferredSize = [38, 18];
-        deselectAllColsBtn.helpTip = "Deselect all data columns";
+        deselectAllColsBtn.helpTip = "Deselect all data series";
 
         var headLabelSpacing = colHeaders.add("statictext", undefined, "Order / Name");
         headLabelSpacing.preferredSize = [105, 15];
@@ -770,20 +815,49 @@
         var yLabelChk = togglesRow2.add("checkbox", undefined, "Show Y-Labels"); yLabelChk.value = true;
         var valueLabelChk = togglesRow2.add("checkbox", undefined, "Show Value Labels"); valueLabelChk.value = false;
 
-        var labelStyleRow = globalTogglesPanel.add("group"); labelStyleRow.orientation = "row"; labelStyleRow.spacing = 10;
-        labelStyleRow.add("statictext", undefined, "Label Position:");
-        var valueLabelPosDD = labelStyleRow.add("dropdownlist", undefined, ["Above Bar / Node", "Center of Bar"]); valueLabelPosDD.selection = 0; valueLabelPosDD.preferredSize = [130, 20];
-        var drawTotalSumChk = labelStyleRow.add("checkbox", undefined, "Show Stack Totals"); drawTotalSumChk.value = false;
+        var labelPosRow = globalTogglesPanel.add("group");
+        labelPosRow.orientation = "row";
+        labelPosRow.spacing = 8;
+        labelPosRow.alignChildren = ["left", "center"];
+
+        // Pie / Donut Text Labels Position
+        var pieTextPosGrp = labelPosRow.add("group");
+        pieTextPosGrp.orientation = "row";
+        pieTextPosGrp.spacing = 6;
+        pieTextPosGrp.visible = false;
+        pieTextPosGrp.add("statictext", undefined, "Text Labels:");
+        var pieTextPosDD = pieTextPosGrp.add("dropdownlist", undefined, ["Outside", "Inside"]);
+        pieTextPosDD.selection = 0;
+        pieTextPosDD.preferredSize = [75, 20];
+
+        // Shared Value Label Position (Used for Bar, Line, and Pie/Donut)
+        var valueLabelPosGrp = labelPosRow.add("group");
+        valueLabelPosGrp.orientation = "row";
+        valueLabelPosGrp.spacing = 6;
+        var valueLabelPosLabel = valueLabelPosGrp.add("statictext", undefined, "Label Position:");
+        var valueLabelPosDD = valueLabelPosGrp.add("dropdownlist", undefined, ["Above Bar / Node", "Center of Bar"]);
+        valueLabelPosDD.selection = 0;
+        valueLabelPosDD.preferredSize = [135, 20];
+
+        var labelOptionsRow = globalTogglesPanel.add("group");
+        labelOptionsRow.orientation = "row";
+        labelOptionsRow.spacing = 12;
+        labelOptionsRow.alignChildren = ["left", "center"];
+        var showPctChk = labelOptionsRow.add("checkbox", undefined, "Show %");
+        showPctChk.value = true;
+        var drawTotalSumChk = labelOptionsRow.add("checkbox", undefined, "Show Stack Totals");
+        drawTotalSumChk.value = false;
 
         var togglesRow3 = globalTogglesPanel.add("group"); togglesRow3.orientation = "row"; togglesRow3.spacing = 12;
         var animateAxesChk = togglesRow3.add("checkbox", undefined, "Animate Axes"); animateAxesChk.value = true;
         var legendChk = togglesRow3.add("checkbox", undefined, "Draw Legend"); legendChk.value = true;
 
-        var animConfigGrp = opt.add("panel", undefined, "Animation");
+        var animConfigGrp = tabOptionsScroll.add("panel", undefined, "  Animation  ");
         animConfigGrp.orientation = "column";
         animConfigGrp.alignChildren = ["fill", "center"];
         animConfigGrp.spacing = 6;
         animConfigGrp.margins = 8;
+        animConfigGrp.minimumSize = [330, -1];
 
         var animToggleRow = animConfigGrp.add("group"); animToggleRow.orientation = "row"; animToggleRow.spacing = 12;
         var animateGraphChk = animToggleRow.add("checkbox", undefined, "Animate Graph"); animateGraphChk.value = true;
@@ -793,11 +867,12 @@
         animDurRow.add("statictext", undefined, "Total Duration (s):"); var totalDurIn = animDurRow.add("edittext", undefined, "2.0"); totalDurIn.preferredSize = [40, 20];
         animDurRow.add("statictext", undefined, "Elem Speed (s):"); var elemDurIn = animDurRow.add("edittext", undefined, "1.0"); elemDurIn.preferredSize = [40, 20];
 
-        var gridConfigGrp = opt.add("panel", undefined, "Grid & Ticks");
+        var gridConfigGrp = tabOptionsScroll.add("panel", undefined, "  Grid & Ticks  ");
         gridConfigGrp.orientation = "column";
         gridConfigGrp.alignChildren = ["fill", "center"];
         gridConfigGrp.spacing = 6;
         gridConfigGrp.margins = 8;
+        gridConfigGrp.minimumSize = [330, -1];
 
         var xAxisPosRow = gridConfigGrp.add("group"); xAxisPosRow.orientation = "row"; xAxisPosRow.spacing = 10;
         xAxisPosRow.add("statictext", undefined, "Baseline Position:");
@@ -807,11 +882,11 @@
         var ticksFlowGrp = gridConfigGrp.add("group"); ticksFlowGrp.orientation = "column"; ticksFlowGrp.alignChildren = ["left", "top"]; ticksFlowGrp.spacing = 4;
         var xTicksRow = ticksFlowGrp.add("group"); xTicksRow.orientation = "row"; xTicksRow.spacing = 10;
         xTicksRow.add("statictext", undefined, "X-Axis Tick Style:");
-        var xTickDD = xTicksRow.add("dropdownlist", undefined, ["None", "Short Ticks", "Full Grid"]); xTickDD.selection = 1; xTickDD.preferredSize = [110, 20]; // Default: Short Ticks
+        var xTickDD = xTicksRow.add("dropdownlist", undefined, ["None", "Short Ticks", "Full Grid"]); xTickDD.selection = 1; xTickDD.preferredSize = [110, 20];
 
         var yTicksRow = ticksFlowGrp.add("group"); yTicksRow.orientation = "row"; yTicksRow.spacing = 10;
         yTicksRow.add("statictext", undefined, "Y-Axis Tick Style:");
-        var yTickDD = yTicksRow.add("dropdownlist", undefined, ["None", "Short Ticks", "Full Grid"]); yTickDD.selection = 1; yTickDD.preferredSize = [110, 20]; // Default: Short Ticks
+        var yTickDD = yTicksRow.add("dropdownlist", undefined, ["None", "Short Ticks", "Full Grid"]); yTickDD.selection = 1; yTickDD.preferredSize = [110, 20];
 
         var yDivsRow = ticksFlowGrp.add("group"); yDivsRow.orientation = "row"; yDivsRow.spacing = 10;
         yDivsRow.add("statictext", undefined, "Y Grid Count:");
@@ -831,11 +906,12 @@
         sizeRow.add("statictext", undefined, "Grid/Tick Width:"); var gridWidthIn = sizeRow.add("edittext", undefined, "1"); gridWidthIn.preferredSize = [35, 20];
 
         // REFERENCE LINES PANEL
-        var refLineGrp = tabOptionsScroll.add("panel", undefined, "Reference Line");
+        var refLineGrp = tabOptionsScroll.add("panel", undefined, "  Reference Line  ");
         refLineGrp.orientation = "column";
         refLineGrp.alignChildren = ["fill", "top"];
         refLineGrp.spacing = 6;
         refLineGrp.margins = 8;
+        refLineGrp.minimumSize = [330, -1];
 
         var refLineRow1 = refLineGrp.add("group");
         refLineRow1.orientation = "row";
@@ -843,7 +919,7 @@
         var drawRefLineChk = refLineRow1.add("checkbox", undefined, "Draw Reference Line"); drawRefLineChk.value = false;
         var animateRefLineChk = refLineRow1.add("checkbox", undefined, "Animate Line"); animateRefLineChk.value = true;
         refLineRow1.add("statictext", undefined, "Axis:");
-        var refLineAxisDD = refLineRow1.add("dropdownlist", undefined, ["Y-Axis", "X-Axis"]); refLineAxisDD.selection = 0; refLineAxisDD.preferredSize = [120, 20];
+        var refLineAxisDD = refLineRow1.add("dropdownlist", undefined, ["Y-Axis", "X-Axis"]); refLineAxisDD.selection = 0; refLineAxisDD.preferredSize = [80, 20];
 
         var refLineRow2 = refLineGrp.add("group");
         refLineRow2.orientation = "row";
@@ -904,6 +980,12 @@
 
         var titleGrp = opt.add("group"); titleGrp.orientation = "row"; titleGrp.alignChildren = ["left", "center"]; titleGrp.spacing = 6;
         titleGrp.add("statictext", undefined, "Graph Title:"); var titleInput = titleGrp.add("edittext", undefined, ""); titleInput.preferredSize = [200, 20];
+
+        var statusRow = win.add("group");
+        statusRow.orientation = "row";
+        statusRow.alignment = ["fill", "bottom"];
+        var statusTxt = statusRow.add("statictext", undefined, "");
+        statusTxt.alignment = ["fill", "center"];
 
         var genBtn = win.add("button", undefined, "Generate Graph inside Active Composition");
         genBtn.preferredSize = [-1, 35]; genBtn.alignment = ["fill", "bottom"];
@@ -966,9 +1048,6 @@
             rowsDetectTxt.text = "Total Active Data Rows: " + (rawLines.length - 1);
         }
 
-        var currentWideColumns = [];
-        var currentLongSeriesOrder = [];
-
         function rebuildColumnChecklist(headers, catCol, subCol) {
             var preserved = [];
             for (var k = 0; k < currentWideColumns.length; k++) {
@@ -995,12 +1074,18 @@
         }
 
         selectAllColsBtn.onClick = function() {
-            for (var i = 0; i < currentWideColumns.length; i++) currentWideColumns[i].checked = true;
+            var isPie = (typeDD.selection.index === 2);
+            var isWide = (formatDD.selection.index === 0 && !isPie);
+            var items = isWide ? currentWideColumns : currentLongSeriesOrder;
+            for (var i = 0; i < items.length; i++) items[i].checked = true;
             updateSeriesColorsUI();
         };
 
         deselectAllColsBtn.onClick = function() {
-            for (var i = 0; i < currentWideColumns.length; i++) currentWideColumns[i].checked = false;
+            var isPie = (typeDD.selection.index === 2);
+            var isWide = (formatDD.selection.index === 0 && !isPie);
+            var items = isWide ? currentWideColumns : currentLongSeriesOrder;
+            for (var i = 0; i < items.length; i++) items[i].checked = false;
             updateSeriesColorsUI();
         };
 
@@ -1015,7 +1100,7 @@
                     if (col) customPastedPalette.push(col);
                 }
                 if (customPastedPalette.length > 0) {
-                    palettePresetDD.selection = 2; // "Custom / Pasted"
+                    palettePresetDD.selection = 2;
                     palettePresetDD.onChange();
                 }
             }
@@ -1023,7 +1108,8 @@
 
         palettePresetDD.onChange = function() {
             var presetName = safeDD(palettePresetDD) || "Palette 1";
-            var isWide = formatDD.selection.index === 0;
+            var isPie = (typeDD.selection.index === 2);
+            var isWide = (formatDD.selection.index === 0 && !isPie);
             var items = isWide ? currentWideColumns : currentLongSeriesOrder;
             var cap = Math.min(items.length || 5, 14);
             var newColors = resolveScaleColors(presetName, cap);
@@ -1038,7 +1124,8 @@
 
         function updateTotalSumVisibility() {
             var isLine = typeDD.selection.index === 0;
-            var isStacked = isLine ? (fillLinesChk.value && areaStackChk.value) : barStackChk.value;
+            var isPie = typeDD.selection.index === 2;
+            var isStacked = isPie ? donutChk.value : (isLine ? (fillLinesChk.value && areaStackChk.value) : barStackChk.value);
             drawTotalSumChk.visible = isStacked;
             reflowUI();
         }
@@ -1054,76 +1141,139 @@
             if (raw.length < 2) return;
             var headers = parseHeaders(raw[0], dChar);
             var isWideFormat = formatDD.selection.index === 0;
+            var isPie = (typeDD.selection.index === 2);
 
-            selectAllColsBtn.visible = isWideFormat;
-            deselectAllColsBtn.visible = isWideFormat;
+            selectAllColsBtn.visible = true;
+            deselectAllColsBtn.visible = true;
 
             var itemsToRender = [];
-            if (isWideFormat) {
+
+            if (isPie) {
+                // For Pie Charts: items represent SLICES, not overall wide columns!
+                var pieSliceNames = [];
+                var xVal = safeDD(xDD) || headers[0];
+                var sVal = safeDD(sDD);
+                var xColIdx = headers.indexOf(xVal);
+                if (xColIdx === -1) xColIdx = 0;
+
+                if (isWideFormat) {
+                    // Slices are derived from the categories listed in X column
+                    for (var r = 1; r < raw.length; r++) {
+                        var cells = splitLine(raw[r], dChar);
+                        var sNameFound = (cells[xColIdx] !== undefined && cells[xColIdx] !== "") 
+                            ? cells[xColIdx].replace(/^\s+|\s+$/g, '') 
+                            : ("Slice " + r);
+                        if (sNameFound !== "" && pieSliceNames.indexOf(sNameFound) === -1) {
+                            pieSliceNames.push(sNameFound);
+                        }
+                    }
+                } else {
+                    // Long format pie chart: Slices are defined by Series dropdown column
+                    var sliceColIdx = sVal ? headers.indexOf(sVal) : -1;
+                    if (sliceColIdx !== -1) {
+                        for (var lr = 1; lr < raw.length; lr++) {
+                            var rCells = splitLine(raw[lr], dChar);
+                            if (rCells[sliceColIdx]) {
+                                var cleanSlice = rCells[sliceColIdx].replace(/^\s+|\s+$/g, '');
+                                if (cleanSlice !== "" && pieSliceNames.indexOf(cleanSlice) === -1) {
+                                    pieSliceNames.push(cleanSlice);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (pieSliceNames.length === 0) pieSliceNames.push("Slice 1");
+
+                var preservedPie = [];
+                for (var p = 0; p < currentLongSeriesOrder.length; p++) {
+                    var existingItem = currentLongSeriesOrder[p];
+                    var eName = (typeof existingItem === "string") ? existingItem : existingItem.name;
+                    if (pieSliceNames.indexOf(eName) !== -1) {
+                        preservedPie.push((typeof existingItem === "string") ? { name: eName, checked: true } : existingItem);
+                    }
+                }
+                for (var np = 0; np < pieSliceNames.length; np++) {
+                    var found = false;
+                    for (var pe = 0; pe < preservedPie.length; pe++) {
+                        if (preservedPie[pe].name === pieSliceNames[np]) { found = true; break; }
+                    }
+                    if (!found) {
+                        preservedPie.push({ name: pieSliceNames[np], checked: true });
+                    }
+                }
+                currentLongSeriesOrder = preservedPie;
+                itemsToRender = currentLongSeriesOrder;
+
+            } else if (isWideFormat) {
                 if (currentWideColumns.length === 0) {
                     rebuildColumnChecklist(headers, safeDD(xDD), safeDD(groupDD));
                     return;
                 }
                 itemsToRender = currentWideColumns;
             } else {
-                var sVal = safeDD(sDD);
-                var yVal = safeDD(yDD);
+                var sValLong = safeDD(sDD);
+                var yValLong = safeDD(yDD);
                 var discovered = [];
-                if (sVal && sVal !== "" && headers.indexOf(sVal) !== -1) {
-                    var sIdx = headers.indexOf(sVal);
+                if (sValLong && sValLong !== "" && headers.indexOf(sValLong) !== -1) {
+                    var sIdx = headers.indexOf(sValLong);
                     for (var j = 1; j < raw.length; j++) {
-                        var r = splitLine(raw[j], dChar);
-                        if (r[sIdx]) {
-                            var cleanVal = r[sIdx].replace(/^\s+|\s+$/g, '');
+                        var rCell = splitLine(raw[j], dChar);
+                        if (rCell[sIdx]) {
+                            var cleanVal = rCell[sIdx].replace(/^\s+|\s+$/g, '');
                             if (cleanVal !== "" && discovered.indexOf(cleanVal) === -1) {
                                 discovered.push(cleanVal);
                             }
                         }
                     }
-                } else if (yVal && yVal !== "") {
-                    discovered.push(yVal);
+                } else if (yValLong && yValLong !== "") {
+                    discovered.push(yValLong);
                 }
                 if (discovered.length === 0) discovered.push("Series 1");
 
                 var preservedLong = [];
                 for (var lo = 0; lo < currentLongSeriesOrder.length; lo++) {
-                    if (discovered.indexOf(currentLongSeriesOrder[lo]) !== -1) {
-                        preservedLong.push(currentLongSeriesOrder[lo]);
+                    var itemObj = currentLongSeriesOrder[lo];
+                    var itemKey = (typeof itemObj === "string") ? itemObj : itemObj.name;
+                    if (discovered.indexOf(itemKey) !== -1) {
+                        preservedLong.push((typeof itemObj === "string") ? { name: itemKey, checked: true } : itemObj);
                     }
                 }
                 for (var d = 0; d < discovered.length; d++) {
-                    if (preservedLong.indexOf(discovered[d]) === -1) {
-                        preservedLong.push(discovered[d]);
+                    var exists = false;
+                    for (var pl = 0; pl < preservedLong.length; pl++) {
+                        if (preservedLong[pl].name === discovered[d]) { exists = true; break; }
+                    }
+                    if (!exists) {
+                        preservedLong.push({ name: discovered[d], checked: true });
                     }
                 }
                 currentLongSeriesOrder = preservedLong;
-                for (var li = 0; li < currentLongSeriesOrder.length; li++) {
-                    itemsToRender.push({ name: currentLongSeriesOrder[li], checked: true });
-                }
+                itemsToRender = currentLongSeriesOrder;
             }
 
             var cap = Math.min(itemsToRender.length, 14);
             var selectedPresetName = safeDD(palettePresetDD) || "Palette 1: Brand Scale";
             var resolvedColors = resolveScaleColors(selectedPresetName, cap);
 
-            var showFillColumn = (typeDD.selection.index === 0)
+            var showFillColumn = isPie ? true : ((typeDD.selection.index === 0)
                 ? (fillLinesChk.value && (customFillChk.value || !strokeLinesChk.value))
-                : fillBarsChk.value;
-            var showStrokeColumn = (typeDD.selection.index === 0)
+                : fillBarsChk.value);
+            var showStrokeColumn = isPie ? false : ((typeDD.selection.index === 0)
                 ? strokeLinesChk.value
-                : strokeBarsChk.value;
+                : strokeBarsChk.value);
 
             fillHeader.visible = showFillColumn;
             strokeHeader.visible = showStrokeColumn;
 
             for (var index = 0; index < itemsToRender.length; index++) {
-                var itemObj = itemsToRender[index];
-                var sName = itemObj.name;
+                var itm = itemsToRender[index];
+                var sName = itm.name;
                 if (!CONFIG.activeSeriesColors[sName]) {
                     var defaultCol = resolvedColors[index % resolvedColors.length];
                     CONFIG.activeSeriesColors[sName] = { fill: defaultCol, stroke: defaultCol };
                 }
-                createDynamicColorRow(itemObj, index, itemsToRender.length, isWideFormat, showFillColumn, showStrokeColumn);
+                createDynamicColorRow(itm, index, itemsToRender.length, (isWideFormat && !isPie), showFillColumn, showStrokeColumn);
             }
             reflowUI();
         }
@@ -1171,18 +1321,16 @@
                 updateSeriesColorsUI();
             };
 
-            if (isWideFormat) {
-                var chk = row.add("checkbox", undefined, "");
-                chk.value = (itemObj.checked !== false);
-                chk.preferredSize = [18, 18];
-                chk.helpTip = "Include " + sName + " in chart";
-                chk.onClick = function() {
-                    itemObj.checked = this.value;
-                };
-            }
+            var chk = row.add("checkbox", undefined, "");
+            chk.value = (itemObj.checked !== false);
+            chk.preferredSize = [18, 18];
+            chk.helpTip = "Include " + sName + " in chart";
+            chk.onClick = function() {
+                itemObj.checked = this.value;
+            };
 
             var labelDisplay = sName.length > 11 ? sName.substring(0, 11) + ".." : sName;
-            var lblWidth = isWideFormat ? 75 : 95;
+            var lblWidth = 75;
             var lbl = row.add("statictext", undefined, labelDisplay);
             lbl.preferredSize = [lblWidth, 20];
             lbl.helpTip = sName;
@@ -1266,27 +1414,6 @@
 
         transposeBtn.onClick = executeTransposition;
 
-        function updateTabScrollbar() {
-            try {
-                if (tabGroup.selection !== tabMapColors) {
-                    tabMapScrollBar.visible = false;
-                    return;
-                }
-                tabMapColors.layout.layout(true);
-                var viewH = tabMapViewport.size[1];
-                var contentH = tabMapScroll.size[1];
-                if (contentH > viewH && viewH > 60) {
-                    tabMapScrollBar.visible = true;
-                    tabMapScrollBar.maxvalue = contentH - viewH;
-                    tabMapScrollBar.jumpdelta = Math.max(30, Math.round(viewH * 0.25));
-                } else {
-                    tabMapScrollBar.visible = false;
-                    tabMapScrollBar.maxvalue = 0;
-                    tabMapScroll.location = [0, 0];
-                }
-            } catch(e) {}
-        }
-
         csvInput.onChange = csvInput.onChanging = updateInspectBox;
         delimInput.onChange = updateInspectBox;
         skipHeaderIn.onChange = function() {
@@ -1297,8 +1424,9 @@
         formatDD.onChange = function() {
             var isWide = formatDD.selection.index === 0;
             var isLine = typeDD.selection.index === 0;
+            var isPie = typeDD.selection.index === 2;
             xRowGrp.visible = true;
-            groupRowGrp.visible = !isLine;
+            groupRowGrp.visible = !isLine && !isPie;
             yRowGrp.visible = !isWide;
             valueLabelsRowGrp.visible = !isWide;
             sRowGrp.visible = !isWide;
@@ -1322,11 +1450,43 @@
         };
 
         typeDD.onChange = function() {
-            var isLine = typeDD.selection.index === 0;
-            groupRowGrp.visible = !isLine;
+            var idx = typeDD.selection.index;
+            var isLine = (idx === 0);
+            var isBar = (idx === 1);
+            var isPie = (idx === 2);
+
+            // Contextual Axis Setup Labels for Pie vs Line/Bar
+            if (isPie) {
+                xLabel.text = "Slices (Cat):";
+                sLabel.text = "Pie Group:";
+                yLabel.text = "Values:";
+            } else {
+                xLabel.text = "X-Axis:";
+                sLabel.text = "Series:";
+                yLabel.text = "Y-Axis:";
+            }
+
+            groupRowGrp.visible = isBar;
             lineStyleGrp.visible = isLine;
-            barStyleGrp.visible = !isLine;
-            layoutGrp.visible = !isLine;
+            barStyleGrp.visible = isBar;
+            pieStyleGrp.visible = isPie;
+            layoutGrp.visible = isBar;
+
+            gridConfigGrp.visible = !isPie;
+            refLineGrp.visible = !isPie;
+
+            togglesRow1.visible = !isPie;
+            pieTextPosGrp.visible = isPie;
+            showPctChk.visible = isPie;
+
+            if (isPie) {
+                valueLabelPosLabel.text = "Value Labels:";
+                fill(valueLabelPosDD, ["Inside", "Outside"]);
+            } else {
+                valueLabelPosLabel.text = "Label Position:";
+                fill(valueLabelPosDD, ["Above Bar / Node", "Center of Bar"]);
+            }
+
             updateSeriesColorsUI();
             updateTotalSumVisibility();
             reflowUI();
@@ -1387,6 +1547,7 @@
                     csvInput.text = content;
                     updateInspectBox();
                     currentWideColumns = [];
+                    currentLongSeriesOrder = [];
                     updateSeriesColorsUI();
                 }
             }
@@ -1428,6 +1589,7 @@
             }
 
             currentWideColumns = [];
+            currentLongSeriesOrder = [];
             rebuildColumnChecklist(headers, safeDD(xDD), safeDD(groupDD));
             updateSeriesColorsUI();
             updateTotalSumVisibility();
@@ -1474,6 +1636,7 @@
                 var headers = parseHeaders(raw[0], dChar);
                 updateGroupDropdownOptions(headers);
                 rebuildColumnChecklist(headers, safeDD(xDD), safeDD(groupDD));
+                updateSeriesColorsUI();
             }
         };
 
@@ -1500,13 +1663,19 @@
 
         genBtn.onClick = function(){
             var comp = app.project.activeItem;
-            if (!(comp instanceof CompItem)) return;
+            if (!(comp instanceof CompItem)) {
+                statusTxt.text = "Error: Please select or open an active Composition.";
+                return;
+            }
 
             var dChar = resolveDelimiter();
             var skipCount = parseInt(skipHeaderIn.text, 10);
             if (isNaN(skipCount) || skipCount < 0) skipCount = 0;
             var raw = getSanitizedLines(csvInput.text, skipCount);
-            if (raw.length < 2) return;
+            if (raw.length < 2) {
+                statusTxt.text = "Error: Not enough data rows in table.";
+                return;
+            }
             
             var headers = parseHeaders(raw[0], dChar);
             var isWideFormat = formatDD.selection.index === 0;
@@ -1522,11 +1691,11 @@
 
             var normalizedData = [];
 
+            var activeWideCols = [];
             if (isWideFormat) {
                 if (currentWideColumns.length === 0) {
                     rebuildColumnChecklist(headers, xVal, groupVal);
                 }
-                var activeWideCols = [];
                 for (var wIdx = 0; wIdx < currentWideColumns.length; wIdx++) {
                     if (currentWideColumns[wIdx].checked) {
                         activeWideCols.push(currentWideColumns[wIdx].name);
@@ -1572,12 +1741,24 @@
                     if (hasAnyData) validRowStep++;
                 }
             } else {
+                var activeLongSeries = [];
+                for (var lIdx = 0; lIdx < currentLongSeriesOrder.length; lIdx++) {
+                    if (currentLongSeriesOrder[lIdx].checked !== false) {
+                        activeLongSeries.push(currentLongSeriesOrder[lIdx].name);
+                    }
+                }
+
                 var validRowStepLong = 0;
                 for (var i = 1; i < raw.length; i++) {
                     var r = splitLine(raw[i], dChar);
                     var obj = {};
                     for (var j = 0; j < headers.length; j++) obj[headers[j]] = r[j] ? r[j] : "";
                     if (obj[xVal] !== "" || obj[yVal] !== "") {
+                        var checkKey = (sVal && headers.indexOf(sVal) !== -1) ? sVal : (xVal && headers.indexOf(xVal) !== -1 ? xVal : null);
+                        if (checkKey && obj[checkKey] !== undefined) {
+                            var itemVal = obj[checkKey].toString().replace(/^\s+|\s+$/g, '');
+                            if (activeLongSeries.indexOf(itemVal) === -1) continue;
+                        }
                         if (valueLabelVal) obj["_value_label"] = r[headers.indexOf(valueLabelVal)] || "";
                         if (groupVal) obj["_sub_group"] = obj[groupVal];
                         obj["_row_step"] = validRowStepLong;
@@ -1587,30 +1768,66 @@
                 }
             }
 
-            if (normalizedData.length === 0) return;
+            if (normalizedData.length === 0) {
+                statusTxt.text = "Error: No valid data rows could be compiled.";
+                return;
+            }
 
-            var isStackedValue = (typeDD.selection.index === 1) ? barStackChk.value : (fillLinesChk.value && areaStackChk.value);
+            var selectedChartType = safeDD(typeDD) || "Line";
+            statusTxt.text = "Generating " + selectedChartType + "...";
 
             app.beginUndoGroup("Generate Animated Chart");
             try {
-                drawGraph(
-                    comp, normalizedData, xVal, yVal, sVal, safeDD(typeDD) || "Line", dotChk.value, 
-                    xGridChk.value, yGridChk.value, xLabelChk.value, yLabelChk.value, valueLabelChk.value,
-                    num(barWidthInput.text), num(barGapInput.text), fillBarsChk.value, strokeBarsChk.value,
-                    strokeLinesChk.value, fillLinesChk.value, fontDD.selection ? fontDD.selection.text : "Helvetica",
-                    isStackedValue, thousandsSepInput.text, titleInput.text, safeDD(xTickDD), safeDD(yTickDD),
-                    num(axisWidthIn.text), num(gridWidthIn.text), animateAxesChk.value, num(fontSizeIn.text),
-                    num(strokeWidthIn.text), legendChk.value, safeDD(legendAlignDD) || "Top Right",
-                    customFillChk.value, num(fillOpacityIn.text), valueLabelVal, yAxisRightChk.value,
-                    safeDD(valueLabelPosDD), drawTotalSumChk.value, safeDD(legendOrientDD) || "Vertical",
-                    customYRangeChk.value, num(minYInput.text), num(maxYInput.text), decSepInput.text,
-                    safeDD(yDecimalsDD), safeDD(valDecimalsDD), safeDD(xAxisPosDD), num(customXAxisLevelInput.text),
-                    animateGraphChk.value, num(totalDurIn.text), num(elemDurIn.text), syncXLabelsChk.value,
-                    safeDD(yDivisionsDD), showSubLabelsChk.value, groupVal, preserveXOrderChk.value,
-                    drawRefLineChk.value, safeDD(refLineAxisDD), refLineValIn.text, safeDD(refLineStyleDD),
-                    num(refLineWidthIn.text), refLineDefaultColor, refLineLabelIn.text, animateRefLineChk.value
-                );
+                if (selectedChartType === "Pie / Donut") {
+                    var selectedPieValPos = (safeDD(valueLabelPosDD) === "Outside") ? "Outside" : "Inside";
+                    drawPieChartSystem(comp, normalizedData, isWideFormat, activeWideCols, xVal, yVal, sVal, {
+                        isDonut: donutChk.value,
+                        holePct: num(holeSizeIn.text),
+                        maxRadius: num(maxRadiusIn.text),
+                        showPct: showPctChk.value,
+                        animate: animateGraphChk.value,
+                        totDuration: num(totalDurIn.text),
+                        font: fontDD.selection ? fontDD.selection.text : "Helvetica",
+                        fontSize: num(fontSizeIn.text),
+                        thousandsSep: thousandsSepInput.text,
+                        decSep: decSepInput.text,
+                        valDecimals: safeDD(valDecimalsDD),
+                        drawLegend: legendChk.value,
+                        legendPos: safeDD(legendAlignDD) || "Top Right",
+                        legendOrient: safeDD(legendOrientDD) || "Vertical",
+                        title: titleInput.text,
+                        palettePreset: safeDD(palettePresetDD) || "Palette 1",
+                        drawXLabels: xLabelChk.value,
+                        drawYLabels: yLabelChk.value,
+                        drawValues: valueLabelChk.value,
+                        drawTotalSum: drawTotalSumChk.value,
+                        textPos: safeDD(pieTextPosDD) || "Outside",
+                        valPos: selectedPieValPos
+                    });
+                } else {
+                    var isStackedValue = (selectedChartType === "Bar") ? barStackChk.value : (fillLinesChk.value && areaStackChk.value);
+                    drawGraph(
+                        comp, normalizedData, xVal, yVal, sVal, selectedChartType, dotChk.value, 
+                        xGridChk.value, yGridChk.value, xLabelChk.value, yLabelChk.value, valueLabelChk.value,
+                        num(barWidthInput.text), num(barGapInput.text), fillBarsChk.value, strokeBarsChk.value,
+                        strokeLinesChk.value, fillLinesChk.value, fontDD.selection ? fontDD.selection.text : "Helvetica",
+                        isStackedValue, thousandsSepInput.text, titleInput.text, safeDD(xTickDD), safeDD(yTickDD),
+                        num(axisWidthIn.text), num(gridWidthIn.text), animateAxesChk.value, num(fontSizeIn.text),
+                        num(strokeWidthIn.text), legendChk.value, safeDD(legendAlignDD) || "Top Right",
+                        customFillChk.value, num(fillOpacityIn.text), valueLabelVal, yAxisRightChk.value,
+                        safeDD(valueLabelPosDD), drawTotalSumChk.value, safeDD(legendOrientDD) || "Vertical",
+                        customYRangeChk.value, num(minYInput.text), num(maxYInput.text), decSepInput.text,
+                        safeDD(yDecimalsDD), safeDD(valDecimalsDD), safeDD(xAxisPosDD), num(customXAxisLevelInput.text),
+                        animateGraphChk.value, num(totalDurIn.text), num(elemDurIn.text), syncXLabelsChk.value,
+                        safeDD(yDivisionsDD), showSubLabelsChk.value, groupVal, preserveXOrderChk.value,
+                        drawRefLineChk.value, safeDD(refLineAxisDD), refLineValIn.text, safeDD(refLineStyleDD),
+                        num(refLineWidthIn.text), refLineDefaultColor, refLineLabelIn.text, animateRefLineChk.value,
+                        safeDD(barOrientationDD) || "Vertical"
+                    );
+                }
+                statusTxt.text = "Graph generated successfully!";
             } catch(err) {
+                statusTxt.text = "Error: " + err.toString();
                 $.writeln("An error occurred during generation: " + err.toString());
             }
             handledSelectionRestore();
@@ -1621,11 +1838,494 @@
         formatDD.onChange();
         updateInspectBox();
 
-        if (win instanceof Window) win.minimumSize = [340, 520];
+        if (win instanceof Window) {
+            win.minimumSize = [440, 560];
+            win.size = [470, 630];
+        }
         return win;
     }
 
-    function drawGraph(comp, data, xKey, yKey, sKey, type, dots, drawXAxis, drawYAxis, drawXLabels, drawYLabels, drawValues, customBarWidth, customBarGap, fillBars, strokeBars, strokeLines, fillLines, selectedFont, isStacked, separatorSymbol, graphTitleText, xTickStyle, yTickStyle, strokeWidthAxis, strokeWidthGrid, animateAxes, selectedFontSize, seriesStrokeWidth, drawLegend, legendPosition, customFill, customFillOpacity, valueCustomLabelKey, rightYAxis, valueLabelPos, drawTotalSum, legendOrientation, customYRange, customMinY, customMaxY, decSep, yDecimalsOpt, valDecimalsOpt, xAxisPosMode, customXAxisLevel, animateGraph, totalAnimDur, elemAnimDur, syncXLabelsPace, yDivisionsOpt, showSubLabels, subGroupKey, preserveXOrder, drawRefLine, refLineAxis, refLineVal, refLineStyle, refLineWidth, refLineColor, refLineLabel, animateRefLine){
+    function drawPieChartSystem(comp, normalizedData, isWideFormat, activeWideCols, xKey, yKey, sKey, cfg) {
+        var columns = [];
+        if (isWideFormat && activeWideCols && activeWideCols.length > 0) {
+            columns = activeWideCols;
+        } else {
+            var distinctGroups = [];
+            for (var d = 0; d < normalizedData.length; d++) {
+                var gVal = (xKey && xKey !== "(None)" && normalizedData[d][xKey] !== undefined)
+                    ? normalizedData[d][xKey].toString().replace(/^\s+|\s+$/g, '')
+                    : "Value";
+                if (gVal !== "" && distinctGroups.indexOf(gVal) === -1) {
+                    distinctGroups.push(gVal);
+                }
+            }
+            columns = distinctGroups.length > 0 ? distinctGroups : ["Value"];
+        }
+
+        var colDataMap = {};
+        var colTotals = {};
+        var maxTotal = 0;
+
+        // Build active slices filter to honor user selection checkboxes in the preview UI
+        var activeSliceFilter = [];
+        if (typeof currentLongSeriesOrder !== "undefined" && currentLongSeriesOrder && currentLongSeriesOrder.length > 0) {
+            for (var sf = 0; sf < currentLongSeriesOrder.length; sf++) {
+                if (currentLongSeriesOrder[sf].checked !== false) {
+                    activeSliceFilter.push(currentLongSeriesOrder[sf].name || currentLongSeriesOrder[sf]);
+                }
+            }
+        }
+
+        for (var c = 0; c < columns.length; c++) {
+            var colName = columns[c];
+            colDataMap[colName] = [];
+            var sum = 0;
+
+            for (var i = 0; i < normalizedData.length; i++) {
+                var row = normalizedData[i];
+                var match = isWideFormat 
+                    ? (row[sKey] === colName) 
+                    : ((xKey && xKey !== "(None)") ? (row[xKey] === colName) : true);
+
+                if (match) {
+                    var rawVal = num(row[yKey]);
+                    var catName = isWideFormat 
+                        ? ((row[xKey] !== undefined && row[xKey] !== null) ? row[xKey].toString() : ("Slice " + (i + 1)))
+                        : ((row[sKey] !== undefined && row[sKey] !== null) ? row[sKey].toString() : ("Slice " + (i + 1)));
+
+                    // If checkboxes were unchecked in UI, filter slice out
+                    if (activeSliceFilter.length > 0 && activeSliceFilter.indexOf(catName) === -1) {
+                        continue;
+                    }
+
+                    if (rawVal > 0) {
+                        var existingSlice = null;
+                        for (var es = 0; es < colDataMap[colName].length; es++) {
+                            if (colDataMap[colName][es].name === catName) {
+                                existingSlice = colDataMap[colName][es];
+                                break;
+                            }
+                        }
+                        if (existingSlice) {
+                            existingSlice.value += rawVal;
+                        } else {
+                            colDataMap[colName].push({ name: catName, value: rawVal });
+                        }
+                        sum += rawVal;
+                    }
+                }
+            }
+            colTotals[colName] = sum;
+            if (sum > maxTotal) maxTotal = sum;
+        }
+
+        if (maxTotal <= 0) return;
+
+        var distinctSliceNames = [];
+        for (var colK in colDataMap) {
+            var sArr = colDataMap[colK];
+            for (var sa = 0; sa < sArr.length; sa++) {
+                if (distinctSliceNames.indexOf(sArr[sa].name) === -1) {
+                    distinctSliceNames.push(sArr[sa].name);
+                }
+            }
+        }
+
+        if (typeof currentLongSeriesOrder !== "undefined" && currentLongSeriesOrder && currentLongSeriesOrder.length > 0) {
+            var orderedSliceNames = [];
+            for (var cso = 0; cso < currentLongSeriesOrder.length; cso++) {
+                var cName = currentLongSeriesOrder[cso].name || currentLongSeriesOrder[cso];
+                if (distinctSliceNames.indexOf(cName) !== -1) {
+                    orderedSliceNames.push(cName);
+                }
+            }
+            for (var dso = 0; dso < distinctSliceNames.length; dso++) {
+                if (orderedSliceNames.indexOf(distinctSliceNames[dso]) === -1) {
+                    orderedSliceNames.push(distinctSliceNames[dso]);
+                }
+            }
+            distinctSliceNames = orderedSliceNames;
+        }
+
+        // Sort slice items inside each pie group to honor slice order
+        for (var colSortKey in colDataMap) {
+            colDataMap[colSortKey].sort(function(a, b) {
+                return distinctSliceNames.indexOf(a.name) - distinctSliceNames.indexOf(b.name);
+            });
+        }
+
+        // Reserve margin space if a Vertical Legend is drawn to completely prevent graph/legend overlap
+        var hasVerticalLegend = (cfg.drawLegend && distinctSliceNames.length > 0 && cfg.legendOrient !== "Horizontal");
+        var isLeftLeg = (cfg.legendPos.indexOf("Left") !== -1);
+        var legendReservedW = hasVerticalLegend ? Math.max(160, cfg.fontSize * 6.5) : 0;
+
+        var numPies = columns.length;
+        var usableWidth = comp.width - (CONFIG.margin * 2) - legendReservedW;
+        var slotWidth = usableWidth / numPies;
+        var startPiesX = CONFIG.margin + (hasVerticalLegend && isLeftLeg ? legendReservedW : 0);
+        var centerY = comp.height / 2;
+
+        var maxAllowedRadius = cfg.maxRadius && cfg.maxRadius > 0 ? cfg.maxRadius : 220;
+        var maxSlotRadius = (slotWidth * 0.42);
+        if (maxAllowedRadius > maxSlotRadius) maxAllowedRadius = maxSlotRadius;
+
+        var resolvedPalette = resolveScaleColors(cfg.palettePreset || "Palette 1", Math.max(distinctSliceNames.length, 6));
+        var sliceColorMap = {};
+        for (var sn = 0; sn < distinctSliceNames.length; sn++) {
+            var sNameKey = distinctSliceNames[sn];
+            sliceColorMap[sNameKey] = (CONFIG.activeSeriesColors[sNameKey] && CONFIG.activeSeriesColors[sNameKey].fill) 
+                ? CONFIG.activeSeriesColors[sNameKey].fill 
+                : resolvedPalette[sn % resolvedPalette.length];
+        }
+
+        var labelsToElevate = [];
+
+        for (var pIdx = 0; pIdx < numPies; pIdx++) {
+            var pCol = columns[pIdx];
+            var slices = colDataMap[pCol];
+            var curTotal = colTotals[pCol];
+            if (!slices || slices.length === 0 || curTotal <= 0) continue;
+
+            var rRatio = (numPies > 1 && maxTotal > 0) ? Math.sqrt(curTotal / maxTotal) : 1.0;
+            var R = Math.max(maxAllowedRadius * rRatio, 24);
+            var isDonut = cfg.isDonut;
+            var holeRatio = isDonut ? (Math.min(Math.max(cfg.holePct, 10), 90) / 100) : 0;
+            var rInner = isDonut ? (R * holeRatio) : 0;
+            var strokeW = isDonut ? (R - rInner) : R;
+            var circleDiameter = isDonut ? (R + rInner) : R;
+
+            var centerX = startPiesX + (pIdx * slotWidth) + (slotWidth / 2);
+
+            var pieNull = comp.layers.addNull();
+            pieNull.name = "PieGroup_" + pCol;
+            var nullTrans = safeProperty(pieNull, "ADBE Transform Group", 3, "Transform");
+            if (nullTrans) {
+                var np = safeProperty(nullTrans, "ADBE Position", 2, "Position");
+                if (np) np.setValue([centerX, centerY]);
+            }
+
+            if (cfg.drawYLabels && (numPies > 1 || pCol !== "Value")) {
+                var colTitleY = centerY - R - 35;
+                var colTitle = createText(comp, pCol, [centerX, colTitleY], "center", "Header_" + pCol, cfg.fontSize * 1.1);
+                labelsToElevate.push(colTitle);
+            }
+
+            // Donut Center Total controlled by Show Stack Totals toggle
+            if (isDonut && cfg.drawTotalSum) {
+                var totalDisplay = formatNumber(curTotal, 0, cfg.thousandsSep, cfg.decSep);
+                var totalTextLayer = createText(comp, totalDisplay, [centerX, centerY + (cfg.fontSize * 0.35)], "center", "Total_" + pCol, cfg.fontSize * 1.2);
+                labelsToElevate.push(totalTextLayer);
+                if (cfg.animate) {
+                    var ttTrans = safeProperty(totalTextLayer, "ADBE Transform Group", 3, "Transform");
+                    if (ttTrans) {
+                        var ttOp = safeProperty(ttTrans, "ADBE Opacity", 11, "Opacity");
+                        if (ttOp) {
+                            ttOp.setValueAtTime(cfg.totDuration * 0.5, 0);
+                            ttOp.setValueAtTime(cfg.totDuration, 100);
+                        }
+                    }
+                }
+            }
+
+            // Build synchronized sequential timeline where slices stick to the leading sweep edge
+            var runningAngleDeg = 0;
+            var sliceTimeline = [];
+            var cumulativeTime = 0;
+            var baseTotDuration = Math.max(cfg.totDuration, 0.5);
+
+            for (var st = 0; st < slices.length; st++) {
+                var sVal = slices[st].value;
+                var sAngleDeg = (sVal / curTotal) * 360;
+                var sPct = (sVal / curTotal);
+                var sDuration = Math.max((sVal / curTotal) * baseTotDuration, 0.1);
+                var sStartTime = cumulativeTime;
+                var sEndTime = sStartTime + sDuration;
+
+                sliceTimeline.push({
+                    startAngleDeg: runningAngleDeg,
+                    sweepDeg: sAngleDeg,
+                    pct: sPct,
+                    startTime: sStartTime,
+                    endTime: sEndTime
+                });
+                runningAngleDeg += sAngleDeg;
+                cumulativeTime = sEndTime;
+            }
+
+            for (var s = 0; s < slices.length; s++) {
+                var sliceObj = slices[s];
+                var sTimeInfo = sliceTimeline[s];
+                var sliceCol = sliceColorMap[sliceObj.name];
+
+                var sliceLayer = comp.layers.addShape();
+                sliceLayer.name = "Slice_" + pCol + "_" + sliceObj.name;
+                sliceLayer.parent = pieNull;
+
+                var sLayerTrans = safeProperty(sliceLayer, "ADBE Transform Group", 3, "Transform");
+                if (sLayerTrans) {
+                    var slp = safeProperty(sLayerTrans, "ADBE Position", 2, "Position");
+                    if (slp) slp.setValue([0, 0]);
+                    var slap = safeProperty(sLayerTrans, "ADBE Anchor Point", 1, "Anchor Point");
+                    if (slap) slap.setValue([0, 0]);
+                }
+
+                var rootContents = safeProperty(sliceLayer, "ADBE Root Vectors Group", 2, "Contents");
+                if (rootContents) {
+                    var grp = rootContents.addProperty("ADBE Vector Group");
+                    grp.name = "SliceShape";
+                    var grpContents = safeProperty(grp, "ADBE Vectors Group", 2, "Contents");
+                    if (grpContents) {
+                        var ell = grpContents.addProperty("ADBE Vector Shape - Ellipse");
+                        if (ell) {
+                            var sz = safeProperty(ell, "ADBE Vector Ellipse Size", 1, "Size");
+                            if (sz) sz.setValue([circleDiameter, circleDiameter]);
+                        }
+
+                        var sStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+                        if (sStroke) {
+                            var sc = safeProperty(sStroke, "ADBE Vector Stroke Color", 4, "Color");
+                            if (sc) sc.setValue(sliceCol);
+                            var sw = safeProperty(sStroke, "ADBE Vector Stroke Width", 5, "Stroke Width");
+                            if (sw) sw.setValue(strokeW);
+                        }
+
+                        var sTrim = grpContents.addProperty("ADBE Vector Filter - Trim");
+                        var trimEnd = null;
+                        if (sTrim) {
+                            var trimStart = safeProperty(sTrim, "ADBE Vector Trim Start", 1, "Start");
+                            if (trimStart) trimStart.setValue(0);
+                            trimEnd = safeProperty(sTrim, "ADBE Vector Trim End", 2, "End");
+                            var trimOffset = safeProperty(sTrim, "ADBE Vector Trim Offset", 3, "Offset");
+                            if (trimOffset) trimOffset.setValue(0);
+                        }
+
+                        var sliceAnglePct = (sliceObj.value / curTotal) * 100;
+                        var sRotProp = safeProperty(sLayerTrans, "ADBE Rotate Z", 6, "Rotation");
+
+                        if (cfg.animate) {
+                            if (trimEnd) {
+                                trimEnd.setValueAtTime(0, 0);
+                                if (sTimeInfo.startTime > 0) {
+                                    trimEnd.setValueAtTime(sTimeInfo.startTime, 0);
+                                }
+                                trimEnd.setValueAtTime(sTimeInfo.endTime, sliceAnglePct);
+                                try {
+                                    var easeT = new KeyframeEase(0, 33);
+                                    for (var kt = 1; kt <= trimEnd.numKeys; kt++) {
+                                        trimEnd.setTemporalEaseAtKey(kt, [easeT], [easeT]);
+                                    }
+                                } catch(eTrimEase) {}
+                            }
+
+                            if (sRotProp) {
+                                sRotProp.setValueAtTime(0, 0);
+                                var angleTrack = 0;
+                                for (var pIdxPrev = 0; pIdxPrev < s; pIdxPrev++) {
+                                    var prevInfo = sliceTimeline[pIdxPrev];
+                                    angleTrack += prevInfo.sweepDeg;
+                                    sRotProp.setValueAtTime(prevInfo.endTime, angleTrack);
+                                }
+                                try {
+                                    var easeR = new KeyframeEase(0, 33);
+                                    for (var kr = 1; kr <= sRotProp.numKeys; kr++) {
+                                        sRotProp.setTemporalEaseAtKey(kr, [easeR], [easeR]);
+                                    }
+                                } catch(eRotEase) {}
+                            }
+                        } else {
+                            if (trimEnd) trimEnd.setValue(sliceAnglePct);
+                            if (sRotProp) sRotProp.setValue(sTimeInfo.startAngleDeg);
+                        }
+                    }
+                }
+
+                // Slices draw clockwise starting at 12 o'clock (0 deg).
+                var midAngleDeg = sTimeInfo.startAngleDeg + (sTimeInfo.sweepDeg / 2);
+                var midAngleRad = midAngleDeg * (Math.PI / 180);
+
+                var isTextInside = (cfg.textPos === "Inside");
+                var isValInside = (cfg.valPos === "Inside");
+
+                var ringCenterRadius = isDonut ? ((R + rInner) / 2) : (R * 0.55);
+                var radialBaseOutside = R + (cfg.fontSize * 0.85);
+
+                var textRadius = isTextInside ? ringCenterRadius : radialBaseOutside;
+                var valRadius = isValInside ? ringCenterRadius : radialBaseOutside;
+
+                if (!isTextInside && !isValInside) {
+                    textRadius = radialBaseOutside;
+                    valRadius = radialBaseOutside + (cfg.fontSize * 0.95);
+                }
+
+                if (isTextInside && isValInside) {
+                    var availableHalf = isDonut ? ((R - rInner) * 0.22) : (R * 0.14);
+                    var offsetAmount = Math.min(availableHalf, cfg.fontSize * 0.45);
+                    textRadius = ringCenterRadius - offsetAmount;
+                    valRadius = ringCenterRadius + offsetAmount;
+                }
+
+                var baselineShift = cfg.fontSize * 0.32;
+
+                var tx = centerX + Math.sin(midAngleRad) * textRadius;
+                var ty = centerY - Math.cos(midAngleRad) * textRadius + baselineShift;
+
+                var vx = centerX + Math.sin(midAngleRad) * valRadius;
+                var vy = centerY - Math.cos(midAngleRad) * valRadius + baselineShift;
+
+                // Text Label Layer (Category Name)
+                if (cfg.drawXLabels) {
+                    var sliceTxtLayer = createText(comp, sliceObj.name, [tx, ty], "center", "TxtLabel_" + sliceObj.name, cfg.fontSize * 0.75);
+                    labelsToElevate.push(sliceTxtLayer);
+
+                    var tTrans = safeProperty(sliceTxtLayer, "ADBE Transform Group", 3, "Transform");
+                    if (tTrans) {
+                        var tOp = safeProperty(tTrans, "ADBE Opacity", 11, "Opacity");
+                        if (tOp) {
+                            if (cfg.animate) {
+                                tOp.setValueAtTime(sTimeInfo.endTime * 0.6, 0);
+                                tOp.setValueAtTime(sTimeInfo.endTime + 0.2, 100);
+                            } else {
+                                tOp.setValue(100);
+                            }
+                        }
+                    }
+                }
+
+                // Value Label Layer (Numeric Value and/or Percentage)
+                var valParts = [];
+                if (cfg.drawValues) {
+                    var decCount = (cfg.valDecimals && cfg.valDecimals !== "Auto") ? parseInt(cfg.valDecimals, 10) : 0;
+                    valParts.push(formatNumber(sliceObj.value, decCount, cfg.thousandsSep, cfg.decSep));
+                }
+                if (cfg.showPct) {
+                    var pctVal = (sliceObj.value / curTotal) * 100;
+                    valParts.push(pctVal.toFixed(1) + "%");
+                }
+
+                if (valParts.length > 0) {
+                    var valLabelStr = valParts.join(" (") + (valParts.length > 1 ? ")" : "");
+                    var sliceValLayer = createText(comp, valLabelStr, [vx, vy], "center", "ValLabel_" + sliceObj.name, cfg.fontSize * 0.75);
+                    labelsToElevate.push(sliceValLayer);
+
+                    var vTrans = safeProperty(sliceValLayer, "ADBE Transform Group", 3, "Transform");
+                    if (vTrans) {
+                        var vOp = safeProperty(vTrans, "ADBE Opacity", 11, "Opacity");
+                        if (vOp) {
+                            if (cfg.animate) {
+                                vOp.setValueAtTime(sTimeInfo.endTime * 0.6, 0);
+                                vOp.setValueAtTime(sTimeInfo.endTime + 0.2, 100);
+                            } else {
+                                vOp.setValue(100);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (cfg.drawLegend && distinctSliceNames.length > 0) {
+            var legendLayer = makeShapeLayer(comp, "Pie_Legend");
+            var legContents = safeProperty(legendLayer, "ADBE Root Vectors Group", 2, "Contents");
+            if (legContents) {
+                var itemH = cfg.fontSize * 1.5;
+                var swatchSz = cfg.fontSize * 0.9;
+                var gap = cfg.fontSize * 0.4;
+                var isLeft = (cfg.legendPos.indexOf("Left") !== -1);
+                var isBottom = (cfg.legendPos.indexOf("Bottom") !== -1);
+                var isCenterY = (cfg.legendPos.indexOf("Center") !== -1);
+
+                if (cfg.legendOrient === "Horizontal") {
+                    var itemSpacing = cfg.fontSize * 1.0;
+                    var itemWidths = [];
+                    var totalLegWidth = 0;
+                    for (var li = 0; li < distinctSliceNames.length; li++) {
+                        var sName = distinctSliceNames[li];
+                        var itmW = swatchSz + gap + (sName.length * cfg.fontSize * 0.55) + itemSpacing;
+                        itemWidths.push(itmW);
+                        totalLegWidth += itmW;
+                    }
+
+                    var startX = isLeft ? (CONFIG.margin + 20) : (comp.width - CONFIG.margin - 20 - totalLegWidth);
+                    if (cfg.legendPos.indexOf("Center") !== -1 && !isLeft && cfg.legendPos.indexOf("Right") === -1) {
+                        startX = (comp.width - totalLegWidth) / 2;
+                    }
+                    if (startX < CONFIG.margin) startX = CONFIG.margin;
+
+                    var legY = isBottom 
+                        ? (comp.height - CONFIG.margin / 2 + 10) 
+                        : ((cfg.title && cfg.title !== "") ? (CONFIG.margin - itemH - 4) : (CONFIG.margin / 2));
+
+                    var curX = startX;
+                    for (var li = 0; li < distinctSliceNames.length; li++) {
+                        var legName = distinctSliceNames[li];
+                        var legColor = sliceColorMap[legName];
+                        var symX = curX + (swatchSz / 2);
+                        var symY = legY;
+
+                        var lGrp = legContents.addProperty("ADBE Vector Group");
+                        lGrp.name = "Leg_" + legName;
+                        var lGrpCont = safeProperty(lGrp, "ADBE Vectors Group", 2, "Contents");
+                        if (lGrpCont) {
+                            var lRect = lGrpCont.addProperty("ADBE Vector Shape - Rect");
+                            if (lRect) {
+                                safeProperty(lRect, "ADBE Vector Rect Size", 1, "Size").setValue([swatchSz, swatchSz]);
+                                safeProperty(lRect, "ADBE Vector Rect Position", 2, "Position").setValue([symX, symY]);
+                            }
+                            var lFill = lGrpCont.addProperty("ADBE Vector Graphic - Fill");
+                            if (lFill) safeProperty(lFill, "ADBE Vector Fill Color", 4, "Color").setValue(legColor);
+                        }
+
+                        var legTxt = createText(comp, legName, [curX + swatchSz + gap, symY + (cfg.fontSize * 0.32)], "left", "LegTxt_" + legName, cfg.fontSize * 0.85);
+                        labelsToElevate.push(legTxt);
+
+                        curX += itemWidths[li];
+                    }
+                } else {
+                    var legX = isLeft ? (CONFIG.margin + 15) : (comp.width - CONFIG.margin - legendReservedW + 25);
+                    var totalLegH = distinctSliceNames.length * itemH;
+                    var legY = isBottom 
+                        ? (comp.height - CONFIG.margin - totalLegH) 
+                        : (isCenterY ? (comp.height / 2) - (totalLegH / 2) : (CONFIG.margin + 20));
+
+                    for (var li = 0; li < distinctSliceNames.length; li++) {
+                        var legName = distinctSliceNames[li];
+                        var itemY = legY + (li * itemH);
+                        var legColor = sliceColorMap[legName];
+
+                        var lGrp = legContents.addProperty("ADBE Vector Group");
+                        lGrp.name = "Leg_" + legName;
+                        var lGrpCont = safeProperty(lGrp, "ADBE Vectors Group", 2, "Contents");
+                        if (lGrpCont) {
+                            var lRect = lGrpCont.addProperty("ADBE Vector Shape - Rect");
+                            if (lRect) {
+                                safeProperty(lRect, "ADBE Vector Rect Size", 1, "Size").setValue([swatchSz, swatchSz]);
+                                safeProperty(lRect, "ADBE Vector Rect Position", 2, "Position").setValue([legX, itemY]);
+                            }
+                            var lFill = lGrpCont.addProperty("ADBE Vector Graphic - Fill");
+                            if (lFill) safeProperty(lFill, "ADBE Vector Fill Color", 4, "Color").setValue(legColor);
+                        }
+
+                        var legTxt = createText(comp, legName, [legX + swatchSz + gap, itemY + (cfg.fontSize * 0.32)], "left", "LegTxt_" + legName, cfg.fontSize * 0.85);
+                        labelsToElevate.push(legTxt);
+                    }
+                }
+            }
+            if (legendLayer) legendLayer.moveToBeginning();
+        }
+
+        if (cfg.title && cfg.title !== "") {
+            var pTitle = createText(comp, cfg.title, [comp.width / 2, CONFIG.margin / 2], "center", "Pie_Chart_Title", cfg.fontSize * 1.5);
+            labelsToElevate.push(pTitle);
+        }
+
+        for (var el = 0; el < labelsToElevate.length; el++) {
+            try {
+                if (labelsToElevate[el]) labelsToElevate[el].moveToBeginning();
+            } catch(eEl) {}
+        }
+    }
+
+    function drawGraph(comp, data, xKey, yKey, sKey, type, dots, drawXAxis, drawYAxis, drawXLabels, drawYLabels, drawValues, customBarWidth, customBarGap, fillBars, strokeBars, strokeLines, fillLines, selectedFont, isStacked, separatorSymbol, graphTitleText, xTickStyle, yTickStyle, strokeWidthAxis, strokeWidthGrid, animateAxes, selectedFontSize, seriesStrokeWidth, drawLegend, legendPosition, customFill, customFillOpacity, valueCustomLabelKey, rightYAxis, valueLabelPos, drawTotalSum, legendOrientation, customYRange, customMinY, customMaxY, decSep, yDecimalsOpt, valDecimalsOpt, xAxisPosMode, customXAxisLevel, animateGraph, totalAnimDur, elemAnimDur, syncXLabelsPace, yDivisionsOpt, showSubLabels, subGroupKey, preserveXOrder, drawRefLine, refLineAxis, refLineVal, refLineStyle, refLineWidth, refLineColor, refLineLabel, animateRefLine, barOrientation){
         var isAnimated = (animateGraph !== false);
         var totDuration = isNaN(totalAnimDur) || totalAnimDur <= 0 ? 2.0 : totalAnimDur;
         var elemDuration = isNaN(elemAnimDur) || elemAnimDur <= 0 ? 1.0 : elemAnimDur;
@@ -1662,12 +2362,10 @@
         var categories = [];
         var subClusters = [];
         
-        // Strict Data Order resolution
         var isStrictOrdered = (preserveXOrder === true);
         var isCategorical = (type === "Bar") || isStrictOrdered;
 
         if (isStrictOrdered) {
-            // In strict data order mode, each row step is an independent slot to prevent duplicate date collisions (e.g. 1901 vs 2001)
             var stepLabelMap = {};
             for (var i = 0; i < data.length; i++) {
                 var step = (data[i]["_row_step"] !== undefined) ? data[i]["_row_step"] : categories.length;
@@ -1800,11 +2498,16 @@
             }
         }
 
+        if (drawLegend && legendOrientation === "Vertical" && !customYRange && (type === "Bar" || isStacked)) {
+            maxY += niceStepY;
+        }
+
         var totalYRange = maxY - minY;
         if (totalYRange <= 0) totalYRange = 1;
 
         var zeroPct = Math.min(Math.max((0 - minY) / totalYRange, 0), 1);
         var zeroScreenY = baseY - (zeroPct * h);
+        var zeroScreenX = margin + (zeroPct * w);
         var xAxisScreenY = (xAxisPosMode === "Bottom of Graph") ? baseY : ((xAxisPosMode === "Custom Y Level") ? baseY - (((customXAxisLevel - minY) / totalYRange) * h) : zeroScreenY);
 
         var resolvedYDecimals = (yDecimalsOpt && yDecimalsOpt !== "Auto") ? parseInt(yDecimalsOpt, 10) : (niceStepY < 0.1 ? 3 : (niceStepY < 1 ? 2 : (niceStepY < 2 && niceStepY % 1 !== 0 ? 1 : 0)));
@@ -1818,7 +2521,6 @@
         }
         if (maxX === minX) maxX = minX + 1;
 
-        // Synchronized Line X coordinate resolver
         function getLineX(cIdx) {
             if (isCategorical) {
                 return (categories.length > 1) ? margin + (cIdx / (categories.length - 1)) * w : margin + (w / 2);
@@ -1846,36 +2548,56 @@
                 }
             }
 
-            var startYTick = Math.ceil(minY / niceStepY) * niceStepY;
-            for (var valY = startYTick; valY <= maxY + (niceStepY * 0.001); valY += niceStepY) {
-                var yPct = (valY - minY) / totalYRange;
-                var tY = baseY - (yPct * h);
-                
-                if (drawYLabels) {
-                    var formattedVal = formatNumber(valY, resolvedYDecimals, separatorSymbol, decSep);
-                    var labelXPos = rightYAxis ? baseX + (currentFontSize * 0.7 + 5) : baseX - (currentFontSize * 0.7 + 5);
-                    var labelJustify = rightYAxis ? "left" : "right";
-                    var labelYPos = tY + (currentFontSize / 3);
-                    var labelText = createText(comp, formattedVal, [labelXPos, labelYPos], labelJustify, "Y_Label_" + valY, currentFontSize);
-                    labelsToElevate.push(labelText);
-                    var op = safeProperty(labelText, "ADBE Transform Group", 3, "Transform");
-                    if (op) {
-                        var opProp = safeProperty(op, "ADBE Opacity", 11, "Opacity");
-                        if (opProp) {
-                            if (isAnimated && animateAxes) {
-                                opProp.setValueAtTime(0.8, 0); opProp.setValueAtTime(1.3, 100);
-                            } else { opProp.setValue(100); }
+            var isHorizontalBar = (type === "Bar" && barOrientation === "Horizontal");
+
+            if (!isHorizontalBar) {
+                var startYTick = Math.ceil(minY / niceStepY) * niceStepY;
+                for (var valY = startYTick; valY <= maxY + (niceStepY * 0.001); valY += niceStepY) {
+                    var yPct = (valY - minY) / totalYRange;
+                    var tY = baseY - (yPct * h);
+                    
+                    if (drawYLabels) {
+                        var formattedVal = formatNumber(valY, resolvedYDecimals, separatorSymbol, decSep);
+                        var labelXPos = rightYAxis ? baseX + (currentFontSize * 0.7 + 5) : baseX - (currentFontSize * 0.7 + 5);
+                        var labelJustify = rightYAxis ? "left" : "right";
+                        var labelYPos = tY + (currentFontSize / 3);
+                        var labelText = createText(comp, formattedVal, [labelXPos, labelYPos], labelJustify, "Y_Label_" + valY, currentFontSize);
+                        labelsToElevate.push(labelText);
+                        var op = safeProperty(labelText, "ADBE Transform Group", 3, "Transform");
+                        if (op) {
+                            var opProp = safeProperty(op, "ADBE Opacity", 11, "Opacity");
+                            if (opProp) {
+                                if (isAnimated && animateAxes) {
+                                    opProp.setValueAtTime(0.8, 0); opProp.setValueAtTime(1.3, 100);
+                                } else { opProp.setValue(100); }
+                            }
                         }
                     }
-                }
 
-                if (ticksGrpContents) {
-                    if (yTickStyle === "Full Grid") makeLineSegment(margin, tY, comp.width - margin, tY, ticksGrpContents, "Y_Grid_" + valY);
-                    else if (yTickStyle === "Short Ticks") makeLineSegment(baseX + (rightYAxis ? 8 : -8), tY, baseX, tY, ticksGrpContents, "Y_Tick_" + valY);
+                    if (ticksGrpContents) {
+                        if (yTickStyle === "Full Grid") makeLineSegment(margin, tY, comp.width - margin, tY, ticksGrpContents, "Y_Grid_" + valY);
+                        else if (yTickStyle === "Short Ticks") makeLineSegment(baseX + (rightYAxis ? 8 : -8), tY, baseX, tY, ticksGrpContents, "Y_Tick_" + valY);
+                    }
+                }
+            } else {
+                var startValTick = Math.ceil(minY / niceStepY) * niceStepY;
+                for (var valXNum = startValTick; valXNum <= maxY + (niceStepY * 0.001); valXNum += niceStepY) {
+                    var xPctH = (valXNum - minY) / totalYRange;
+                    var tX = margin + (xPctH * w);
+                    if (drawYLabels) {
+                        var formattedHVal = formatNumber(valXNum, resolvedYDecimals, separatorSymbol, decSep);
+                        var lblY = baseY + currentFontSize + 8;
+                        var hTickText = createText(comp, formattedHVal, [tX, lblY], "center", "X_Num_Tick_" + valXNum, currentFontSize);
+                        labelsToElevate.push(hTickText);
+                    }
+                    if (ticksGrpContents) {
+                        if (yTickStyle === "Full Grid") makeLineSegment(tX, baseY, tX, baseY - h, ticksGrpContents, "Grid_H_" + valXNum);
+                        else if (yTickStyle === "Short Ticks") makeLineSegment(tX, baseY, tX, baseY + 8, ticksGrpContents, "Tick_H_" + valXNum);
+                    }
                 }
             }
 
-            if (type === "Bar") {
+            if (type === "Bar" && !isHorizontalBar) {
                 var singleCatW = w / categories.length;
                 var labelSkipRatio = Math.ceil(categories.length / 10); 
                 for (var c = 0; c < categories.length; c++) {
@@ -1905,8 +2627,17 @@
                         else if (xTickStyle === "Short Ticks") makeLineSegment(cX, xAxisScreenY, cX, xAxisScreenY + 8, ticksGrpContents, "X_Tick_" + c);
                     }
                 }
+            } else if (type === "Bar" && isHorizontalBar) {
+                var singleCatH = h / categories.length;
+                for (var ch = 0; ch < categories.length; ch++) {
+                    var chVal = categories[ch];
+                    var chY = (baseY - h) + (ch * singleCatH) + (singleCatH / 2);
+                    if (drawXLabels) {
+                        var catLblText = createText(comp, chVal.toString(), [margin - 12, chY + (currentFontSize * 0.35)], "right", "Cat_Label_" + chVal, currentFontSize);
+                        labelsToElevate.push(catLblText);
+                    }
+                }
             } else {
-                // Line Graph Ticks & Labels (Synchronized to data positions)
                 if (isCategorical) {
                     var labelSkipRatio = Math.ceil(categories.length / 10);
                     for (var c = 0; c < categories.length; c++) {
@@ -1989,7 +2720,280 @@
             }
         }
 
-        if (type === "Bar") {
+        if (type === "Bar" && barOrientation === "Horizontal") {
+            var singleCatH = h / categories.length;
+            var numSubGroups = subClusters.length > 0 ? subClusters.length : 1;
+            var usableCatH = singleCatH * (1 - clusterGapPct);
+            var clusterSlotH = usableCatH / numSubGroups;
+
+            for (var c = 0; c < categories.length; c++) {
+                var catTop = (baseY - h) + (c * singleCatH) + (singleCatH * clusterGapPct / 2);
+
+                for (var scIdx = 0; scIdx < numSubGroups; scIdx++) {
+                    var scKey = subClusters.length > 0 ? subClusters[scIdx] : "_default";
+                    var clusterCenterY = catTop + (scIdx * clusterSlotH) + (clusterSlotH / 2);
+
+                    if (subClusters.length > 0 && showSubLabels && drawXLabels) {
+                        var subLabelY = clusterCenterY + (currentFontSize * 0.35);
+                        var subLblLayer = createText(comp, scKey, [margin - 12, subLabelY], "right", "SubLabel_" + c + "_" + scIdx, currentFontSize * 0.7);
+                        labelsToElevate.push(subLblLayer);
+                    }
+
+                    if (isStacked) {
+                        var barThickness = clusterSlotH * barWidthPct;
+                        var prevPosBarLayer = null;
+                        var prevNegBarLayer = null;
+                        var stackSumAccumulatorPos = 0;
+                        var stackSumAccumulatorNeg = 0;
+
+                        for (var g = 0; g < groupNames.length; g++) {
+                            var seriesName = groupNames[g];
+                            var val = (stackTable[c] && stackTable[c][scKey]) ? (stackTable[c][scKey][g] || 0) : 0;
+                            var barLen = (Math.abs(val) / totalYRange) * w;
+                            if (barLen <= 0) barLen = 2;
+                            var isPos = (val >= 0);
+                            if (isPos) stackSumAccumulatorPos += val; else stackSumAccumulatorNeg += val;
+
+                            var seriesColorObj = CONFIG.activeSeriesColors[seriesName] || { fill: CONFIG.defaultFillPalette[0], stroke: CONFIG.defaultStrokePalette[0] };
+                            var barName = seriesName + "_HBar_Cat" + c + "_Sub" + scIdx;
+                            var bar = makeShapeLayer(comp, barName);
+
+                            var wSliderGrp = bar.effect.addProperty("ADBE Slider Control");
+                            wSliderGrp.name = "Segment Width";
+                            var wSliderProp = wSliderGrp.property(1);
+
+                            var catDelay = (categories.length > 1) ? (c / (categories.length - 1)) * staggerSpan : 0;
+                            var seriesDelay = (groupNames.length > 1) ? (g / groupNames.length) * (elemDuration * 0.2) : 0;
+                            var staggerDelay = catDelay + seriesDelay;
+
+                            if (isAnimated) {
+                                wSliderProp.setValueAtTime(staggerDelay, 0);
+                                wSliderProp.setValueAtTime(staggerDelay + elemDuration, barLen);
+                                try {
+                                    var easeOut = new KeyframeEase(0, 33);
+                                    var easeIn = new KeyframeEase(0, 33);
+                                    wSliderProp.setTemporalEaseAtKey(1, [easeOut], [easeIn]);
+                                    wSliderProp.setTemporalEaseAtKey(2, [easeOut], [easeIn]);
+                                } catch(eEaseH) {}
+                            } else {
+                                wSliderProp.setValue(barLen);
+                            }
+
+                            var trans = safeProperty(bar, "ADBE Transform Group", 3, "Transform");
+                            if (trans) {
+                                var posProp = safeProperty(trans, "ADBE Position", 2, "Position");
+                                if (posProp) {
+                                    if (isPos) {
+                                        if (prevPosBarLayer === null) {
+                                            posProp.setValue([zeroScreenX, clusterCenterY]);
+                                        } else {
+                                            posProp.setValue([zeroScreenX, clusterCenterY]);
+                                            posProp.expression = 'var prev = thisComp.layer("' + prevPosBarLayer.name + '");\n' +
+                                                                'var prevW = prev.effect("Segment Width")(1);\n' +
+                                                                '[prev.transform.position[0] + prevW, value[1]];';
+                                        }
+                                    } else {
+                                        if (prevNegBarLayer === null) {
+                                            posProp.setValue([zeroScreenX, clusterCenterY]);
+                                        } else {
+                                            posProp.setValue([zeroScreenX, clusterCenterY]);
+                                            posProp.expression = 'var prev = thisComp.layer("' + prevNegBarLayer.name + '");\n' +
+                                                                'var prevW = prev.effect("Segment Width")(1);\n' +
+                                                                '[prev.transform.position[0] - prevW, value[1]];';
+                                        }
+                                    }
+                                }
+                            }
+
+                            var contents = safeProperty(bar, "ADBE Root Vectors Group", 2, "Contents");
+                            if (contents) {
+                                var fillGrp = contents.addProperty("ADBE Vector Group");
+                                fillGrp.name = "Fill_Group";
+                                var fillGrpContents = safeProperty(fillGrp, "ADBE Vectors Group", 2, "Contents");
+                                if (fillGrpContents) {
+                                    var rect = fillGrpContents.addProperty("ADBE Vector Shape - Rect");
+                                    rect.name = "Rect_Path";
+                                    var sizeProp = safeProperty(rect, "ADBE Vector Rect Size", 1, "Size");
+                                    if (sizeProp) {
+                                        sizeProp.setValue([barLen, barThickness]);
+                                        sizeProp.expression = 'var w = effect("Segment Width")(1);\n[w, ' + barThickness + '];';
+                                    }
+                                    var rectPos = safeProperty(rect, "ADBE Vector Rect Position", 2, "Position");
+                                    if (rectPos) {
+                                        var offsetExpr = isPos ? 'var w = effect("Segment Width")(1);\n[w/2, 0];' : 'var w = effect("Segment Width")(1);\n[-w/2, 0];';
+                                        rectPos.setValue([isPos ? barLen / 2 : -barLen / 2, 0]);
+                                        rectPos.expression = offsetExpr;
+                                    }
+                                    if (fillBars) {
+                                        var fill = fillGrpContents.addProperty("ADBE Vector Graphic - Fill");
+                                        if (fill) safeProperty(fill, "ADBE Vector Fill Color", 4, "Color").setValue(seriesColorObj.fill);
+                                    }
+                                    if (strokeBars) {
+                                        var stroke = fillGrpContents.addProperty("ADBE Vector Graphic - Stroke");
+                                        if (stroke) {
+                                            safeProperty(stroke, "ADBE Vector Stroke Color", 4, "Color").setValue(seriesColorObj.stroke);
+                                            safeProperty(stroke, "ADBE Vector Stroke Width", 5, "Stroke Width").setValue(currentStrokeWidth);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (drawValues && val !== 0) {
+                                var valTextString = formatNumber(val, resolvedValDecimals, separatorSymbol, decSep);
+                                var valText = createText(comp, valTextString, [zeroScreenX, clusterCenterY], "center", "Val_" + barName, currentFontSize);
+                                labelsToElevate.push(valText);
+                                var vTrans = safeProperty(valText, "ADBE Transform Group", 3, "Transform");
+                                if (vTrans) {
+                                    var vPos = safeProperty(vTrans, "ADBE Position", 2, "Position");
+                                    if (vPos) {
+                                        var isCentered = (valueLabelPos === "Center of Bar");
+                                        if (isCentered) {
+                                            var cExpr = isPos
+                                                ? 'var pBar = thisComp.layer("' + barName + '");\nvar w = pBar.effect("Segment Width")(1);\n[pBar.transform.position[0] + (w / 2), pBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];'
+                                                : 'var pBar = thisComp.layer("' + barName + '");\nvar w = pBar.effect("Segment Width")(1);\n[pBar.transform.position[0] - (w / 2), pBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];';
+                                            vPos.expression = cExpr;
+                                        } else {
+                                            var oExpr = isPos
+                                                ? 'var pBar = thisComp.layer("' + barName + '");\nvar w = pBar.effect("Segment Width")(1);\n[pBar.transform.position[0] + w + 8, pBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];'
+                                                : 'var pBar = thisComp.layer("' + barName + '");\nvar w = pBar.effect("Segment Width")(1);\n[pBar.transform.position[0] - w - 8, pBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];';
+                                            vPos.expression = oExpr;
+                                        }
+                                    }
+                                    var vOp = safeProperty(vTrans, "ADBE Opacity", 11, "Opacity");
+                                    if (vOp) {
+                                        if (isAnimated) {
+                                            vOp.setValueAtTime(staggerDelay + (elemDuration * 0.4), 0);
+                                            vOp.setValueAtTime(staggerDelay + elemDuration, 100);
+                                        } else { vOp.setValue(100); }
+                                    }
+                                }
+                            }
+
+                            if (isPos) prevPosBarLayer = bar; else prevNegBarLayer = bar;
+                        }
+
+                        if (drawTotalSum && (prevPosBarLayer || prevNegBarLayer)) {
+                            if (prevPosBarLayer && stackSumAccumulatorPos > 0) {
+                                var totalStrP = formatNumber(stackSumAccumulatorPos, resolvedValDecimals, separatorSymbol, decSep);
+                                var totalTextP = createText(comp, totalStrP, [zeroScreenX, clusterCenterY], "left", "Total_Sum_Pos_" + c + "_" + scIdx, currentFontSize);
+                                labelsToElevate.push(totalTextP);
+                                var ttTransP = safeProperty(totalTextP, "ADBE Transform Group", 3, "Transform");
+                                if (ttTransP) {
+                                    var ttPosP = safeProperty(ttTransP, "ADBE Position", 2, "Position");
+                                    if (ttPosP) {
+                                        ttPosP.expression = 'var rightBar = thisComp.layer("' + prevPosBarLayer.name + '");\n' +
+                                                           'var w = rightBar.effect("Segment Width")(1);\n' +
+                                                           '[rightBar.transform.position[0] + w + 8, rightBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];';
+                                    }
+                                    var ttOpP = safeProperty(ttTransP, "ADBE Opacity", 11, "Opacity");
+                                    if (ttOpP) {
+                                        if (isAnimated) {
+                                            ttOpP.setValueAtTime(totDuration * 0.6, 0);
+                                            ttOpP.setValueAtTime(totDuration, 100);
+                                        } else { ttOpP.setValue(100); }
+                                    }
+                                }
+                            }
+                            if (prevNegBarLayer && stackSumAccumulatorNeg < 0) {
+                                var totalStrN = formatNumber(stackSumAccumulatorNeg, resolvedValDecimals, separatorSymbol, decSep);
+                                var totalTextN = createText(comp, totalStrN, [zeroScreenX, clusterCenterY], "right", "Total_Sum_Neg_" + c + "_" + scIdx, currentFontSize);
+                                labelsToElevate.push(totalTextN);
+                                var ttTransN = safeProperty(totalTextN, "ADBE Transform Group", 3, "Transform");
+                                if (ttTransN) {
+                                    var ttPosN = safeProperty(ttTransN, "ADBE Position", 2, "Position");
+                                    if (ttPosN) {
+                                        ttPosN.expression = 'var leftBar = thisComp.layer("' + prevNegBarLayer.name + '");\n' +
+                                                           'var w = leftBar.effect("Segment Width")(1);\n' +
+                                                           '[leftBar.transform.position[0] - w - 8, leftBar.transform.position[1] + (' + (currentFontSize * 0.35) + ')];';
+                                    }
+                                    var ttOpN = safeProperty(ttTransN, "ADBE Opacity", 11, "Opacity");
+                                    if (ttOpN) {
+                                        if (isAnimated) {
+                                            ttOpN.setValueAtTime(totDuration * 0.6, 0);
+                                            ttOpN.setValueAtTime(totDuration, 100);
+                                        } else { ttOpN.setValue(100); }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        var usableHeight = clusterSlotH * (1 - clusterGapPct);
+                        var barThickness = (usableHeight * barWidthPct) / groupNames.length;
+                        var groupSpacing = groupNames.length > 1 ? (usableHeight * (1 - barWidthPct)) / (groupNames.length - 1) : 0;
+
+                        for (var g = 0; g < groupNames.length; g++) {
+                            var seriesName = groupNames[g];
+                            var val = (stackTable[c] && stackTable[c][scKey]) ? (stackTable[c][scKey][g] || 0) : 0;
+                            var py = (clusterCenterY - (usableHeight / 2)) + (g * (barThickness + groupSpacing)) + (barThickness / 2);
+                            var barLen = (Math.abs(val) / totalYRange) * w;
+                            if (barLen <= 0) barLen = 2;
+                            var dir = (val >= 0) ? 1 : -1;
+
+                            var seriesColorObj = CONFIG.activeSeriesColors[seriesName] || { fill: CONFIG.defaultFillPalette[0], stroke: CONFIG.defaultStrokePalette[0] };
+                            var barName = seriesName + "_HBar_Cat" + c + "_Sub" + scIdx;
+                            var bar = makeShapeLayer(comp, barName);
+                            var trans = safeProperty(bar, "ADBE Transform Group", 3, "Transform");
+                            if (trans) safeProperty(trans, "ADBE Position", 2, "Position").setValue([zeroScreenX, py]);
+
+                            var contents = safeProperty(bar, "ADBE Root Vectors Group", 2, "Contents");
+                            if (contents) {
+                                var fillGrp = contents.addProperty("ADBE Vector Group");
+                                fillGrp.name = "Fill_Group";
+                                var fillGrpTrans = safeProperty(fillGrp, "ADBE Vector Transform Group", 3, "Transform");
+                                if (fillGrpTrans) {
+                                    var fillGrpScale = safeProperty(fillGrpTrans, "ADBE Vector Scale", 3, "Scale");
+                                    if (fillGrpScale) {
+                                        var catDelay = (categories.length > 1) ? (c / (categories.length - 1)) * staggerSpan : 0;
+                                        var seriesDelay = (groupNames.length > 1) ? (g / groupNames.length) * (elemDuration * 0.2) : 0;
+                                        var staggerDelay = catDelay + seriesDelay;
+                                        if (isAnimated) {
+                                            fillGrpScale.setValueAtTime(staggerDelay, [0, 100]);
+                                            fillGrpScale.setValueAtTime(staggerDelay + elemDuration, [100, 100]);
+                                        } else { fillGrpScale.setValue([100, 100]); }
+                                    }
+                                }
+                                var fillGrpContents = safeProperty(fillGrp, "ADBE Vectors Group", 2, "Contents");
+                                if (fillGrpContents) {
+                                    var rect = fillGrpContents.addProperty("ADBE Vector Shape - Rect");
+                                    safeProperty(rect, "ADBE Vector Rect Size", 1, "Size").setValue([barLen, barThickness]);
+                                    safeProperty(rect, "ADBE Vector Rect Position", 2, "Position").setValue([dir * (barLen / 2), 0]);
+                                    if (fillBars) {
+                                        var fill = fillGrpContents.addProperty("ADBE Vector Graphic - Fill");
+                                        if (fill) safeProperty(fill, "ADBE Vector Fill Color", 4, "Color").setValue(seriesColorObj.fill);
+                                    }
+                                    if (strokeBars) {
+                                        var stroke = fillGrpContents.addProperty("ADBE Vector Graphic - Stroke");
+                                        if (stroke) {
+                                            safeProperty(stroke, "ADBE Vector Stroke Color", 4, "Color").setValue(seriesColorObj.stroke);
+                                            safeProperty(stroke, "ADBE Vector Stroke Width", 5, "Stroke Width").setValue(currentStrokeWidth);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (drawValues && val !== 0) {
+                                var isCentered = (valueLabelPos === "Center of Bar");
+                                var vPosCenterX = isCentered ? zeroScreenX + (dir * (barLen / 2)) : zeroScreenX + (dir * barLen) + (dir * 8);
+                                var vJust = isCentered ? "center" : (dir >= 0 ? "left" : "right");
+                                var labelTextString = formatNumber(val, resolvedValDecimals, separatorSymbol, decSep);
+                                var valText = createText(comp, labelTextString, [vPosCenterX, py + (currentFontSize * 0.35)], vJust, "Val_" + barName, currentFontSize);
+                                labelsToElevate.push(valText);
+                                var vTrans = safeProperty(valText, "ADBE Transform Group", 3, "Transform");
+                                if (vTrans) {
+                                    var vOp = safeProperty(vTrans, "ADBE Opacity", 11, "Opacity");
+                                    if (vOp) {
+                                        if (isAnimated) {
+                                            vOp.setValueAtTime(staggerDelay + (elemDuration * 0.5), 0);
+                                            vOp.setValueAtTime(staggerDelay + elemDuration, 100);
+                                        } else { vOp.setValue(100); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (type === "Bar") {
             var singleCatW = w / categories.length;
             var numSubGroups = subClusters.length > 0 ? subClusters.length : 1;
             var usableCatWidth = singleCatW * (1 - clusterGapPct);
@@ -2429,7 +3433,6 @@
             if (axisLayer) axisLayer.moveToBeginning();
         }
 
-        // REFERENCE LINE GENERATOR
         if (drawRefLine && refLineVal !== "") {
             var refLayer = makeShapeLayer(comp, "Ref_Line_" + refLineVal);
             var refContents = safeProperty(refLayer, "ADBE Root Vectors Group", 2, "Contents");
@@ -2502,7 +3505,7 @@
                             var dashesD = safeProperty(refStroke, "ADBE Vector Stroke Dashes", 10, "Dashes");
                             if (dashesD) {
                                 try {
-                                    safeProperty(refStroke, "ADBE Vector Stroke Line Cap", 6, "Line Cap").setValue(2); // Round Cap
+                                    safeProperty(refStroke, "ADBE Vector Stroke Line Cap", 6, "Line Cap").setValue(2);
                                     dashesD.addProperty("ADBE Vector Stroke Dash 1");
                                     safeProperty(dashesD, "ADBE Vector Stroke Dash 1", 1, "Dash").setValue(0.1);
                                     dashesD.addProperty("ADBE Vector Stroke Gap 1");
@@ -2582,8 +3585,18 @@
                     : (groupNames.length * legendItemHeight);
 
                 var legendYStart = margin + padY;
-                if (isCenterY) legendYStart = (comp.height / 2) - (totalLegendHeight / 2);
-                else if (isBottom) legendYStart = comp.height - margin - totalLegendHeight - padY;
+                if (legendOrientation === "Horizontal") {
+                    if (isBottom) {
+                        legendYStart = baseY + currentFontSize * 2.2 + 8;
+                    } else if (isCenterY) {
+                        legendYStart = (comp.height / 2) - (legendItemHeight / 2);
+                    } else {
+                        legendYStart = margin - legendItemHeight - 8;
+                    }
+                } else {
+                    if (isCenterY) legendYStart = (comp.height / 2) - (totalLegendHeight / 2);
+                    else if (isBottom) legendYStart = comp.height - margin - totalLegendHeight - padY;
+                }
 
                 if (legendOrientation === "Horizontal") {
                     var itemWidths = [];
@@ -2842,12 +3855,6 @@
         return axis;
     }
 
-    var ui = buildUI(thisObj);
-    if (ui instanceof Window) { 
-        ui.center(); 
-        ui.show(); 
-    }
-
     function handledSelectionRestore() {
         try {
             var activeComp = app.project.activeItem;
@@ -2858,6 +3865,12 @@
                 }
             }
         } catch(e) {}
+    }
+
+    var ui = buildUI(thisObj);
+    if (ui instanceof Window) { 
+        ui.center(); 
+        ui.show(); 
     }
 
 })(this);
